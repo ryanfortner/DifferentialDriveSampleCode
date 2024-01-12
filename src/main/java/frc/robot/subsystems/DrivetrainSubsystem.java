@@ -7,17 +7,23 @@ package frc.robot.subsystems;
 import frc.robot.Constants;
 
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.REVLibError;
+import com.revrobotics.CANSparkBase;
 import com.revrobotics.CANSparkLowLevel;
+//import com.revrobotics.RelativeEncoder;
+//import edu.wpi.first.wpilibj.motorcontrol.*;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class DrivetrainSubsystem extends SubsystemBase {
+  CANSparkBase leftFrontMotor = new CANSparkMax(Constants.OperatorConstants.leftFrontMotorPort, CANSparkLowLevel.MotorType.kBrushless) {};
+  CANSparkBase leftBackMotor = new CANSparkMax(Constants.OperatorConstants.leftBackMotorPort, CANSparkLowLevel.MotorType.kBrushless); leftBackMotor.follow(leftFrontMotor, false);  
+  CANSparkBase rightFrontMotor = new CANSparkMax(Constants.OperatorConstants.rightFrontMotorPort, CANSparkLowLevel.MotorType.kBrushless);
+  CANSparkBase rightBackMotor = new CANSparkMax(Constants.OperatorConstants.rightBackMotorPort, CANSparkLowLevel.MotorType.kBrushless);
 
-  CANSparkMax leftMotor  = new CANSparkMax(Constants.OperatorConstants.leftMotorPort, CANSparkLowLevel.MotorType.kBrushless);
-  CANSparkMax rightMotor = new CANSparkMax(Constants.OperatorConstants.rightMotorPort, CANSparkLowLevel.MotorType.kBrushless);
-
-  RelativeEncoder testEncoder = testMotor
+  /*RelativeEncoder leftEncoder = leftFrontMotor.getEncoder();
+  RelativeEncoder rightEncoder = rightFrontMotor.getEncoder();*/
 
   /** Creates a new ExampleSubsystem. */
   public DrivetrainSubsystem() {}
