@@ -20,5 +20,6 @@ public final class Constants {
     public static final int leftFrontMotorPort = 2;
     public static final int rightBackMotorPort = 3;
     public static final int rightFrontMotorPort = 4;
+    public static final int test = 5;
   }
 }
