@@ -4,19 +4,18 @@
 
 package frc.robot.subsystems;
 
-import frc.robot.Constants;
-
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.REVLibError;
 import com.revrobotics.CANSparkBase;
 import com.revrobotics.CANSparkLowLevel;
+import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import edu.wpi.first.wpilibj.motorcontrol.*;
-
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;  
+import frc.robot.Constants;
+import frc.robot.Constants.DriveConstants;
 
 public class DrivetrainSubsystem extends SubsystemBase {
   CANSparkBase leftFrontMotor = new CANSparkMax(Constants.OperatorConstants.leftFrontMotorPort, CANSparkLowLevel.MotorType.kBrushless);
@@ -27,11 +26,7 @@ public class DrivetrainSubsystem extends SubsystemBase {
   RelativeEncoder leftEncoder = leftFrontMotor.getEncoder();
   RelativeEncoder rightEncoder = rightFrontMotor.getEncoder();
 
-  MotorControllerGroup leftControllerGroup = new MotorControllerGroup(leftBackMotor, leftFrontMotor);
-  MotorControllerGroup rightControllerGroup = new MotorControllerGroup(rightBackMotor, rightFrontMotor);
-
-  DifferentialDrive differentialDrive = new DifferentialDrive(leftControllerGroup, rightControllerGroup);
-
+  DifferentialDrive differentialDrive = new DifferentialDrive(leftFrontMotor, rightFrontMotor);
 
   /** Creates a new ExampleSubsystem. */
   public DrivetrainSubsystem() {
@@ -43,15 +38,67 @@ public class DrivetrainSubsystem extends SubsystemBase {
     leftEncoder.setPosition(0);
     rightEncoder.setPosition(0);
 
+    rightEncoder.setPositionConversionFactor(DriveConstants.kLinearDistanceConversionFactor);
+    leftEncoder.setPositionConversionFactor(DriveConstants.kLinearDistanceConversionFactor);
+    rightEncoder.setVelocityConversionFactor(DriveConstants.kLinearDistanceConversionFactor / 60);
+    leftEncoder.setVelocityConversionFactor(DriveConstants.kLinearDistanceConversionFactor / 60);
+
     leftBackMotor.follow(leftFrontMotor);
     rightBackMotor.follow(rightFrontMotor);
 
-    rightControllerGroup.setInverted(true);
-    leftControllerGroup.setInverted(false);
-  }
 
+    rightFrontMotor.setInverted(false);
+    leftFrontMotor.setInverted(true);
+
+    resetEncoders();
+  }
   public void arcadeDrive(double fwd, double rot) {
     differentialDrive.arcadeDrive(fwd, rot);
+  }
+
+  public void resetEncoders() {
+    rightEncoder.setPosition(0);
+    leftEncoder.setPosition(0);
+  }
+
+  public double getRightEncoderPosition() {
+    return rightEncoder.getPosition();
+  }
+  public double getLeftEncoderPosition() {
+    return leftEncoder.getPosition();
+  }
+
+  public double getRightEncoderVelocity() {
+    return rightEncoder.getVelocity();
+  }
+  public double getLeftEncoderVelocity() {
+    return leftEncoder.getVelocity();
+  }
+
+  public DifferentialDriveWheelSpeeds getWheelSpeeds() {
+    return new DifferentialDriveWheelSpeeds(getLeftEncoderVelocity(), getRightEncoderVelocity());
+  }
+
+  public void tankDriveVolts(double leftVolts, double rightVolts) {
+    leftFrontMotor.setVoltage(leftVolts);
+    rightFrontMotor.setVoltage(rightVolts);
+    differentialDrive.feed();
+  } 
+
+  public RelativeEncoder getLeftEncoder() {
+    return leftEncoder;
+  }
+
+  public RelativeEncoder getRightEncoder() {
+    return rightEncoder;
+  }
+
+  public void setMaxOutput(double maxOutput) {
+    differentialDrive.setMaxOutput(maxOutput);
+  }
+
+  public double getAverageEncoderPosition() {
+    return ((getLeftEncoderPosition() + getRightEncoderPosition()) / 2.0);
   }
 
   /**
@@ -80,7 +127,8 @@ public class DrivetrainSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    SmartDashboard.putNumber("left encoder value meters", getLeftEncoderPosition());
+    SmartDashboard.putNumber("right encoder value meters", getRightEncoderPosition());
   }
 
   @Override

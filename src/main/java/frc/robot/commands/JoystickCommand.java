@@ -8,6 +8,7 @@ import frc.robot.RobotContainer;
 import frc.robot.subsystems.DrivetrainSubsystem;
 import edu.wpi.first.wpilibj2.command.Command;
 
+
 /** An example command that uses an example subsystem. */
 public class JoystickCommand extends Command {
   @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
@@ -33,8 +34,8 @@ public class JoystickCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double forwardSpeed = RobotContainer.joystick.getX();
-    double turningSpeed = RobotContainer.joystick.getZ();
+    double forwardSpeed = RobotContainer.joystick.getY() * .4;
+    double turningSpeed = RobotContainer.joystick.getZ() * .2;
     drivetrainSubsystem.arcadeDrive(forwardSpeed, turningSpeed);
   }
 
@@ -47,4 +48,6 @@ public class JoystickCommand extends Command {
   public boolean isFinished() {
     return false;
   }
+
+  
 }
