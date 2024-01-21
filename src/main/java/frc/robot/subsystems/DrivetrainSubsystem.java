@@ -4,12 +4,16 @@
 
 package frc.robot.subsystems;
 
+import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkBase;
 import com.revrobotics.CANSparkLowLevel;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -27,6 +31,9 @@ public class DrivetrainSubsystem extends SubsystemBase {
   RelativeEncoder rightEncoder = rightFrontMotor.getEncoder();
 
   DifferentialDrive differentialDrive = new DifferentialDrive(leftFrontMotor, rightFrontMotor);
+  AHRS navX = new AHRS(SPI.Port.kMXP);
+
+  DifferentialDriveOdometry odometry;
 
   /** Creates a new ExampleSubsystem. */
   public DrivetrainSubsystem() {
@@ -50,10 +57,13 @@ public class DrivetrainSubsystem extends SubsystemBase {
     rightFrontMotor.setInverted(false);
     leftFrontMotor.setInverted(true);
 
+    odometry = new DifferentialDriveOdometry(navX.getRotation2d(), leftEncoder.getPosition(), rightEncoder.getPosition());
+    navX.reset();
     resetEncoders();
+    odometry.resetPosition(navX.getRotation2d(), 0, 0, new Pose2d());
   }
   public void arcadeDrive(double fwd, double rot) {
-    differentialDrive.arcadeDrive(fwd, rot);
+    differentialDrive. arcadeDrive(fwd, rot);
   }
 
   public void resetEncoders() {
@@ -62,10 +72,10 @@ public class DrivetrainSubsystem extends SubsystemBase {
   }
 
   public double getRightEncoderPosition() {
-    return rightEncoder.getPosition();
+    return -rightEncoder.getPosition();
   }
   public double getLeftEncoderPosition() {
-    return leftEncoder.getPosition();
+    return -leftEncoder.getPosition();
   }
 
   public double getRightEncoderVelocity() {
@@ -78,6 +88,11 @@ public class DrivetrainSubsystem extends SubsystemBase {
   public DifferentialDriveWheelSpeeds getWheelSpeeds() {
     return new DifferentialDriveWheelSpeeds(getLeftEncoderVelocity(), getRightEncoderVelocity());
   }
+
+  public Pose2d getPose2d() {
+    return odometry.getPoseMeters();
+  }
+
 
   public void tankDriveVolts(double leftVolts, double rightVolts) {
     leftFrontMotor.setVoltage(leftVolts);
@@ -97,8 +112,20 @@ public class DrivetrainSubsystem extends SubsystemBase {
     differentialDrive.setMaxOutput(maxOutput);
   }
 
+  public double getTurnRate() {
+    return -navX.getRate();
+  }
+
+  public double getHeading() {
+    return navX.getRotation2d().getDegrees();
+  }
+
   public double getAverageEncoderPosition() {
     return ((getLeftEncoderPosition() + getRightEncoderPosition()) / 2.0);
+  }
+
+  public void zeroHeading() {
+    navX.reset();
   }
 
   /**
@@ -127,8 +154,10 @@ public class DrivetrainSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
+    odometry.update(navX.getRotation2d(), leftEncoder.getPosition(), rightEncoder.getPosition());
     SmartDashboard.putNumber("left encoder value meters", getLeftEncoderPosition());
     SmartDashboard.putNumber("right encoder value meters", getRightEncoderPosition());
+    SmartDashboard.putNumber("gyro", getHeading());
   }
 
   @Override
