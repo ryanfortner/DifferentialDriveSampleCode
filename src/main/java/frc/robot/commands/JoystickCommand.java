@@ -34,8 +34,15 @@ public class JoystickCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double forwardSpeed = RobotContainer.joystick.getY() * .4;
+    double forwardSpeed = 0;
+    if (Math.abs(RobotContainer.joystick.getY()) >= 0.1) {
+      forwardSpeed = RobotContainer.joystick.getY() * .4;
+    } 
+
     double turningSpeed = RobotContainer.joystick.getZ() * .2;
+
+    
+
     drivetrainSubsystem.arcadeDrive(forwardSpeed, turningSpeed);
   }
 

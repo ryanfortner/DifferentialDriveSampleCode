@@ -128,6 +128,12 @@ public class DrivetrainSubsystem extends SubsystemBase {
     navX.reset();
   }
 
+  public void resetOdometry(Pose2d pose) {
+    resetEncoders();
+  }
+
+
+
   /**
    * Example command factory method.
    *

@@ -4,13 +4,30 @@
 
 package frc.robot;
 
+import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.Autos;
 import frc.robot.commands.JoystickCommand;
 import frc.robot.subsystems.DrivetrainSubsystem;
+
+import java.io.IOException;
+import java.nio.file.Path;
+
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.RamseteController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryUtil;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RamseteCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
@@ -28,11 +45,66 @@ public class RobotContainer {
 
   public static Joystick joystick = new Joystick(0);
 
+  SendableChooser<Command> chooser = new SendableChooser<>();
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the trigger bindings
     configureBindings();
     drivetrainSubsystem.setDefaultCommand(JoystickCommand);
+
+    chooser.addOption("Straight", trajectoryToRamseteCommand("/Users/ryanfortner/Downloads/2022Experiment/src/main/deploy/deploy/pathplanner/paths/Straight.path", false));
+
+    Shuffleboard.getTab("autonomous").add(chooser);
+  }
+
+  public Command trajectoryToRamseteCommand(String filename, boolean resetOdometry) {
+    Trajectory trajectory;
+
+    try {
+      Path trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve(filename);
+      trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
+    } catch(IOException exception) {
+      DriverStation.reportError("Unable to open trajectory " + filename, exception.getStackTrace());
+      System.out.println("Unable to read from file " + filename);
+      return new InstantCommand();
+    }
+
+    // autonomous begins
+    /*RamseteCommand ramseteCommand = 
+      new RamseteCommand(
+        trajectory, 
+        drivetrainSubsystem.getPose2d(), 
+        new RamseteController(DriveConstants.kRamseteB, DriveConstants.kRamseteZeta), 
+        new SimpleMotorFeedforward(DriveConstants.ksVolts, DriveConstants.kvVoltSecondsPerMeter, DriveConstants.kaVoltSecondsSquaredPerMeter),
+        DriveConstants.kDriveKinematics,
+        drivetrainSubsystem.getWheelSpeeds(),
+        new PIDController(DriveConstants.kPDriveVel, 0, 0),
+        new PIDController(DriveConstants.kPDriveVel, 0, 0),
+        drivetrainSubsystem::tankDriveVolts,
+        drivetrainSubsystem);*/
+        RamseteCommand ramseteCommand =
+        new RamseteCommand(
+            trajectory,
+            drivetrainSubsystem::getPose2d,
+            new RamseteController(DriveConstants.kRamseteB, DriveConstants.kRamseteZeta),
+            new SimpleMotorFeedforward(
+                DriveConstants.ksVolts,
+                DriveConstants.kvVoltSecondsPerMeter,
+                DriveConstants.kaVoltSecondsSquaredPerMeter),
+            DriveConstants.kDriveKinematics,
+            drivetrainSubsystem::getWheelSpeeds,
+            new PIDController(DriveConstants.kPDriveVel, 0, 0),
+            new PIDController(DriveConstants.kPDriveVel, 0, 0),
+            // RamseteCommand passes volts to the callback
+            drivetrainSubsystem::tankDriveVolts,
+            drivetrainSubsystem);
+
+      if (resetOdometry) {
+        return new SequentialCommandGroup(new InstantCommand(() -> drivetrainSubsystem.resetOdometry(trajectory.getInitialPose())), ramseteCommand);
+      } else {
+        return ramseteCommand;
+      }
   }
 
   /**
@@ -55,6 +127,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return null;
+    return chooser.getSelected();
   }
 }
