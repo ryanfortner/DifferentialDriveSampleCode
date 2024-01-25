@@ -20,6 +20,7 @@ public final class Constants {
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
 
+    // Constant of each id for each CANSparkMAX Motor Controller
     public static final int leftBackMotorPort = 1;
     public static final int leftFrontMotorPort = 2;
     public static final int rightBackMotorPort = 3;
@@ -34,6 +35,7 @@ public final class Constants {
         public static final double kLinearDistancePerMotorRotation = (0.0254 * (1 / (kGearRatio * 2 * Math.PI *
                         0.0254 * (kWheelRadiusInches)) * 10));
 
+        // Efficiency values from SysID
         public static final double ksVolts = -0.045772;
         public static final double kvVoltSecondsPerMeter = 3.0212;
         public static final double kaVoltSecondsSquaredPerMeter = 0.42369;

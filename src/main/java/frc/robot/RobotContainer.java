@@ -10,19 +10,10 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.JoystickCommand;
 import frc.robot.subsystems.DrivetrainSubsystem;
 
-import java.io.IOException;
-import java.nio.file.Path;
-
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.RamseteController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryUtil;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -30,6 +21,11 @@ import edu.wpi.first.wpilibj2.command.RamseteCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.math.trajectory.Trajectory;
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.path.*;
+
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -52,61 +48,15 @@ public class RobotContainer {
     // Configure the trigger bindings
     configureBindings();
     drivetrainSubsystem.setDefaultCommand(JoystickCommand);
-
-    chooser.addOption("Straight", trajectoryToRamseteCommand("/Users/ryanfortner/Downloads/2022Experiment/src/main/deploy/deploy/pathplanner/paths/Straight.path", false));
+    // Build an auto chooser. This will use Commands.none() as the default option.
+    chooser = AutoBuilder.buildAutoChooser();
 
     Shuffleboard.getTab("autonomous").add(chooser);
   }
 
-  public Command trajectoryToRamseteCommand(String filename, boolean resetOdometry) {
-    Trajectory trajectory;
+ 
 
-    try {
-      Path trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve(filename);
-      trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
-    } catch(IOException exception) {
-      DriverStation.reportError("Unable to open trajectory " + filename, exception.getStackTrace());
-      System.out.println("Unable to read from file " + filename);
-      return new InstantCommand();
-    }
-
-    // autonomous begins
-    /*RamseteCommand ramseteCommand = 
-      new RamseteCommand(
-        trajectory, 
-        drivetrainSubsystem.getPose2d(), 
-        new RamseteController(DriveConstants.kRamseteB, DriveConstants.kRamseteZeta), 
-        new SimpleMotorFeedforward(DriveConstants.ksVolts, DriveConstants.kvVoltSecondsPerMeter, DriveConstants.kaVoltSecondsSquaredPerMeter),
-        DriveConstants.kDriveKinematics,
-        drivetrainSubsystem.getWheelSpeeds(),
-        new PIDController(DriveConstants.kPDriveVel, 0, 0),
-        new PIDController(DriveConstants.kPDriveVel, 0, 0),
-        drivetrainSubsystem::tankDriveVolts,
-        drivetrainSubsystem);*/
-        RamseteCommand ramseteCommand =
-        new RamseteCommand(
-            trajectory,
-            drivetrainSubsystem::getPose2d,
-            new RamseteController(DriveConstants.kRamseteB, DriveConstants.kRamseteZeta),
-            new SimpleMotorFeedforward(
-                DriveConstants.ksVolts,
-                DriveConstants.kvVoltSecondsPerMeter,
-                DriveConstants.kaVoltSecondsSquaredPerMeter),
-            DriveConstants.kDriveKinematics,
-            drivetrainSubsystem::getWheelSpeeds,
-            new PIDController(DriveConstants.kPDriveVel, 0, 0),
-            new PIDController(DriveConstants.kPDriveVel, 0, 0),
-            // RamseteCommand passes volts to the callback
-            drivetrainSubsystem::tankDriveVolts,
-            drivetrainSubsystem);
-
-      if (resetOdometry) {
-        return new SequentialCommandGroup(new InstantCommand(() -> drivetrainSubsystem.resetOdometry(trajectory.getInitialPose())), ramseteCommand);
-      } else {
-        return ramseteCommand;
-      }
-  }
-
+  
   /**
    * Use this method to define your trigger->command mappings. Triggers can be created via the
    * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary
@@ -126,7 +76,8 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // An example command will be run in autonomous
-    return chooser.getSelected();
-  }
+    // For single commands, lets you run a single auto and then follows path
+    PathPlannerPath path = PathPlannerPath.fromPathFile("Straight");
+    return AutoBuilder.followPath(path);
+}
 }

@@ -35,10 +35,11 @@ public class JoystickCommand extends Command {
   @Override
   public void execute() {
     double forwardSpeed = 0;
+    // Creates deadzone 
     if (Math.abs(RobotContainer.joystick.getY()) >= 0.1) {
       forwardSpeed = RobotContainer.joystick.getY() * .4;
     } 
-
+    
     double turningSpeed = RobotContainer.joystick.getZ() * .2;
 
     
