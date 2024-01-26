@@ -13,6 +13,7 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
@@ -109,19 +110,23 @@ public void drive(ChassisSpeeds speeds) {
   DifferentialDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
 
   // Hypothetical maximum speed in meters per second (unknown for now)
-  double maxSpeedMetersPerSecond = 2.0; 
+  double maxSpeedMetersPerSecond = 3.0; 
 
   // Convert from meters per second to -1 to 1 range by dividing cur by max
-  double leftSpeed = wheelSpeeds.leftMetersPerSecond / maxSpeedMetersPerSecond;
-  double rightSpeed = wheelSpeeds.rightMetersPerSecond / maxSpeedMetersPerSecond;
+  double leftSpeed = (wheelSpeeds.leftMetersPerSecond / maxSpeedMetersPerSecond);
+  double rightSpeed = (wheelSpeeds.rightMetersPerSecond / maxSpeedMetersPerSecond);
 
   // Ensure the values are within -1 to 1 range
-  leftSpeed = Math.max(-1, Math.min(leftSpeed, 1)) * 0.05;
-  rightSpeed = Math.max(-1, Math.min(rightSpeed, 1)) * 0.05;
+  leftSpeed = Math.max(-1, Math.min(leftSpeed, 1)) * 0.2;
+  rightSpeed = Math.max(-1, Math.min(rightSpeed, 1)) * 0.2;
+
+  System.out.println("left speed " + leftSpeed);
+  System.out.println("right speed " + rightSpeed);
 
   // Set the speeds to the motors
   leftFrontMotor.set(leftSpeed);
   rightFrontMotor.set(rightSpeed);
+  differentialDrive.feed();
 }
 
   public void resetEncoders() {
@@ -192,6 +197,9 @@ public void drive(ChassisSpeeds speeds) {
 
   public void resetOdometry(Pose2d pose) {
     resetEncoders();
+    navX.reset();
+
+    odometry.resetPosition(navX.getRotation2d(), getLeftEncoderPosition(), getRightEncoderPosition(), getPose2d());
   }
 
 
@@ -228,6 +236,7 @@ public void drive(ChassisSpeeds speeds) {
     SmartDashboard.putNumber("left encoder value meters", getLeftEncoderPosition());
     SmartDashboard.putNumber("right encoder value meters", getRightEncoderPosition());
     SmartDashboard.putNumber("gyro", getHeading());
+    differentialDrive.feed();
   }
 
   @Override
