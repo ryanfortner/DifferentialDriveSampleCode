@@ -8,20 +8,36 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.1,
-        "y": 7.0
+        "x": 3.0,
+        "y": 6.5
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 2.5,
-        "y": 7.0
+        "x": 5.0,
+        "y": 5.0
       },
       "prevControl": {
-        "x": 2.4,
-        "y": 7.0
+        "x": 4.0,
+        "y": 6.0
+      },
+      "nextControl": {
+        "x": 6.0,
+        "y": 4.0
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 6.960511242959807,
+        "y": 1.0992505175893557
+      },
+      "prevControl": {
+        "x": 6.710511242959807,
+        "y": 2.5992505175893554
       },
       "nextControl": null,
       "isLocked": false,

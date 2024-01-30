@@ -118,15 +118,16 @@ public void drive(ChassisSpeeds speeds) {
 
   // Ensure the values are within -1 to 1 range
   leftSpeed = Math.max(-1, Math.min(leftSpeed, 1)) * 0.2;
-  rightSpeed = Math.max(-1, Math.min(rightSpeed, 1)) * 0.2;
+  rightSpeed = Math.max(-1, Math.min(rightSpeed, 1)) * -0.2;
 
-  System.out.println("left speed " + leftSpeed);
-  System.out.println("right speed " + rightSpeed);
+  SmartDashboard.putNumber("leftSpeed", leftSpeed);
+  SmartDashboard.putNumber("rightSpeed", rightSpeed);
 
   // Set the speeds to the motors
-  leftFrontMotor.set(leftSpeed);
+  leftFrontMotor.set(leftSpeed * -1);
   rightFrontMotor.set(rightSpeed);
-  differentialDrive.feed();
+  differentialDrive.feed()
+  ;
 }
 
   public void resetEncoders() {
