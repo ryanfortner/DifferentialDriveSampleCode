@@ -67,11 +67,7 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // For single commands, lets you run a single auto and then follows path
-<<<<<<< HEAD
-    PathPlannerPath path = PathPlannerPath.fromPathFile("Curvy");
-=======
-    PathPlannerPath path = PathPlannerPath.fromPathFile("TestA");
->>>>>>> 959ced1681d1e9eb26f91cd9e52d6c99df6d109f
+    PathPlannerPath path = PathPlannerPath.fromPathFile("Straight1M");
     return AutoBuilder.followPath(path);
 }
 }
