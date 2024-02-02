@@ -13,24 +13,30 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;  
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.Constants.DriveConstants;
 
 public class DrivetrainSubsystem extends SubsystemBase {
-  CANSparkBase leftFrontMotor = new CANSparkMax(Constants.OperatorConstants.leftFrontMotorPort, CANSparkLowLevel.MotorType.kBrushless);
-  CANSparkBase leftBackMotor = new CANSparkMax(Constants.OperatorConstants.leftBackMotorPort, CANSparkLowLevel.MotorType.kBrushless); 
-  CANSparkBase rightFrontMotor = new CANSparkMax(Constants.OperatorConstants.rightFrontMotorPort, CANSparkLowLevel.MotorType.kBrushless);
-  CANSparkBase rightBackMotor = new CANSparkMax(Constants.OperatorConstants.rightBackMotorPort, CANSparkLowLevel.MotorType.kBrushless);
+  CANSparkBase leftFrontMotor = new CANSparkMax(Constants.OperatorConstants.leftFrontMotorPort,
+      CANSparkLowLevel.MotorType.kBrushless);
+  CANSparkBase leftBackMotor = new CANSparkMax(Constants.OperatorConstants.leftBackMotorPort,
+      CANSparkLowLevel.MotorType.kBrushless);
+  CANSparkBase rightFrontMotor = new CANSparkMax(Constants.OperatorConstants.rightFrontMotorPort,
+      CANSparkLowLevel.MotorType.kBrushless);
+  CANSparkBase rightBackMotor = new CANSparkMax(Constants.OperatorConstants.rightBackMotorPort,
+      CANSparkLowLevel.MotorType.kBrushless);
 
   RelativeEncoder leftEncoder = leftFrontMotor.getEncoder();
   RelativeEncoder rightEncoder = rightFrontMotor.getEncoder();
@@ -39,16 +45,45 @@ public class DrivetrainSubsystem extends SubsystemBase {
   AHRS navX = new AHRS(SPI.Port.kMXP);
 
   DifferentialDriveOdometry odometry;
-  DifferentialDriveKinematics kinematics =
-  new DifferentialDriveKinematics(DriveConstants.kTrackwidthMeters);
+  DifferentialDriveKinematics kinematics = new DifferentialDriveKinematics(DriveConstants.kTrackwidthMeters);
 
   /** Creates a new ExampleSubsystem. */
   public DrivetrainSubsystem() {
-    // Resets motor controllers (good practice)
-    leftFrontMotor.restoreFactoryDefaults();
-    leftBackMotor.restoreFactoryDefaults();
-    rightFrontMotor.restoreFactoryDefaults();
-    rightBackMotor.restoreFactoryDefaults();
+
+    odometry = new DifferentialDriveOdometry(navX.getRotation2d(), leftEncoder.getPosition(),
+        rightEncoder.getPosition());
+    new Thread(() -> {
+      try {
+        Thread.sleep(1000);
+        navX.reset();
+        resetOdometry(new Pose2d());
+      } catch (Exception e) {
+      }
+    }).start();
+    // navX.reset();
+    // resetEncoders();
+    // odometry.resetPosition(navX.getRotation2d(), 0, 0, new Pose2d());
+
+    AutoBuilder.configureRamsete(
+        this::getPose2d, // Robot pose supplier
+        this::resetOdometry, // Method to reset odometry
+        this::curChassisSpeeds, // Current ChassisSpeeds supplier
+        this::drive, // Method that will drive the robot given ChassisSpeeds
+        new ReplanningConfig(), // Default path replanning config.
+        () -> {
+          // Boolean supplier that controls when the path will be mirrored for the red
+          // alliance
+          // This will flip the path being followed to the red side of the field.
+          // THE ORIGIN WILL REMAIN ON THE BLUE SIDE (VERY IMPORTANT)
+
+          var alliance = DriverStation.getAlliance();
+          if (alliance.isPresent()) {
+            return alliance.get() == DriverStation.Alliance.Red;
+          }
+          return false;
+        },
+        this // Reference to this subsystem to set requirements
+    );
 
     leftEncoder.setPosition(0);
     rightEncoder.setPosition(0);
@@ -58,7 +93,7 @@ public class DrivetrainSubsystem extends SubsystemBase {
     leftEncoder.setPositionConversionFactor(DriveConstants.kLinearDistanceConversionFactor);
     rightEncoder.setVelocityConversionFactor(DriveConstants.kLinearDistanceConversionFactor / 60);
     leftEncoder.setVelocityConversionFactor(DriveConstants.kLinearDistanceConversionFactor / 60);
-    
+
     // Makes back follow front so each side operates as 1
     leftBackMotor.follow(leftFrontMotor);
     rightBackMotor.follow(rightFrontMotor);
@@ -66,67 +101,47 @@ public class DrivetrainSubsystem extends SubsystemBase {
     // Inversions due to motor setup
     rightFrontMotor.setInverted(false);
     leftFrontMotor.setInverted(true);
+    // Resets motor controllers (good practice)
+    leftFrontMotor.restoreFactoryDefaults();
+    leftBackMotor.restoreFactoryDefaults();
+    rightFrontMotor.restoreFactoryDefaults();
+    rightBackMotor.restoreFactoryDefaults();
+  }
 
-    odometry = new DifferentialDriveOdometry(navX.getRotation2d(), leftEncoder.getPosition(), rightEncoder.getPosition());
-    navX.reset();
-    resetEncoders();
-    odometry.resetPosition(navX.getRotation2d(), 0, 0, new Pose2d());
-
-    AutoBuilder.configureRamsete(
-                this::getPose2d, // Robot pose supplier
-                this::resetOdometry, // Method to reset odometry 
-                this::curChassisSpeeds, // Current ChassisSpeeds supplier
-                this::drive, // Method that will drive the robot given ChassisSpeeds
-                new ReplanningConfig(), // Default path replanning config. 
-                () -> {
-                    // Boolean supplier that controls when the path will be mirrored for the red alliance
-                    // This will flip the path being followed to the red side of the field.
-                    // THE ORIGIN WILL REMAIN ON THE BLUE SIDE (VERY IMPORTANT)
-
-                    var alliance = DriverStation.getAlliance();
-                    if (alliance.isPresent()) {
-                        return alliance.get() == DriverStation.Alliance.Red;
-                    }
-                    return false;
-                },
-                this // Reference to this subsystem to set requirements
-        );
-    }
-    // Uses forward speed (joystick input) and turning speed (joystick input)
+  // Uses forward speed (joystick input) and turning speed (joystick input)
   public void arcadeDrive(double fwd, double rot) {
     differentialDrive.arcadeDrive(fwd, rot);
   }
 
   public ChassisSpeeds curChassisSpeeds() {
-    // Gets wheel speeds in differentialDrive class using method 
-    DifferentialDriveWheelSpeeds wheelSpeeds = getWheelSpeeds();
+    // Gets wheel speeds in differentialDrive class using method
+    // DifferentialDriveWheelSpeeds wheelSpeeds = getWheelSpeeds();
     // Converts differentialDrive wheel speeds into chassisSpeed wheels
-    return kinematics.toChassisSpeeds(wheelSpeeds);
-}
+    // return kinematics.toChassisSpeeds(wheelSpeeds);
+    return new ChassisSpeeds(getLeftEncoderVelocity(), getRightEncoderVelocity(), getTurnRate());
+  }
 
-public void drive(ChassisSpeeds speeds) {
-  DifferentialDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
+  public void drive(ChassisSpeeds speeds) {
+    DifferentialDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
 
-  // Hypothetical maximum speed in meters per second (unknown for now)
-  double maxSpeedMetersPerSecond = 3.0; 
+    // Hypothetical maximum speed in meters per second (unknown for now)
+    // double maxSpeedMetersPerSecond = 3.0;
 
-  // Convert from meters per second to -1 to 1 range by dividing cur by max
-  double leftSpeed = (wheelSpeeds.leftMetersPerSecond / maxSpeedMetersPerSecond);
-  double rightSpeed = (wheelSpeeds.rightMetersPerSecond / maxSpeedMetersPerSecond);
+    // // Convert from meters per second to -1 to 1 range by dividing cur by max
+    // double leftSpeed = (wheelSpeeds.leftMetersPerSecond /
+    // maxSpeedMetersPerSecond);
+    // double rightSpeed = (wheelSpeeds.rightMetersPerSecond /
+    // maxSpeedMetersPerSecond);
 
-  // Ensure the values are within -1 to 1 range
-  leftSpeed = Math.max(-1, Math.min(leftSpeed, 1)) * 0.2;
-  rightSpeed = Math.max(-1, Math.min(rightSpeed, 1)) * -0.2;
+    // // Ensure the values are within -1 to 1 range
+    // leftSpeed = Math.max(-1, Math.min(leftSpeed, 1)) * 0.2;
+    // rightSpeed = Math.max(-1, Math.min(rightSpeed, 1)) * -0.2;
+    // Set the speeds to the motors
 
-  SmartDashboard.putNumber("leftSpeed", leftSpeed);
-  SmartDashboard.putNumber("rightSpeed", rightSpeed);
-
-  // Set the speeds to the motors
-  leftFrontMotor.set(leftSpeed * -1);
-  rightFrontMotor.set(rightSpeed);
-  differentialDrive.feed()
-  ;
-}
+    leftFrontMotor.set(wheelSpeeds.leftMetersPerSecond);
+    rightFrontMotor.set(wheelSpeeds.rightMetersPerSecond);
+    differentialDrive.feed();
+  }
 
   public void resetEncoders() {
     rightEncoder.setPosition(0);
@@ -137,6 +152,7 @@ public void drive(ChassisSpeeds speeds) {
   public double getRightEncoderPosition() {
     return -rightEncoder.getPosition();
   }
+
   public double getLeftEncoderPosition() {
     return -leftEncoder.getPosition();
   }
@@ -144,6 +160,7 @@ public void drive(ChassisSpeeds speeds) {
   public double getRightEncoderVelocity() {
     return rightEncoder.getVelocity();
   }
+
   public double getLeftEncoderVelocity() {
     return leftEncoder.getVelocity();
   }
@@ -162,7 +179,7 @@ public void drive(ChassisSpeeds speeds) {
     leftFrontMotor.setVoltage(leftVolts);
     rightFrontMotor.setVoltage(rightVolts);
     differentialDrive.feed();
-  } 
+  }
 
   public RelativeEncoder getLeftEncoder() {
     return leftEncoder;
@@ -195,13 +212,13 @@ public void drive(ChassisSpeeds speeds) {
   }
 
   public void resetOdometry(Pose2d pose) {
-    resetEncoders();
-    navX.reset();
+    odometry.resetPosition(new Rotation2d(), 0, 0, pose);
+    // resetEncoders();
+    // navX.reset();
 
-    odometry.resetPosition(navX.getRotation2d(), getLeftEncoderPosition(), getRightEncoderPosition(), getPose2d());
+    // odometry.resetPosition(navX.getRotation2d(), getLeftEncoderPosition(),
+    // getRightEncoderPosition(), pose);
   }
-
-
 
   /**
    * Example command factory method.
@@ -218,7 +235,8 @@ public void drive(ChassisSpeeds speeds) {
   }
 
   /**
-   * An example method querying a boolean state of the subsystem (for example, a digital sensor).
+   * An example method querying a boolean state of the subsystem (for example, a
+   * digital sensor).
    *
    * @return value of some boolean subsystem state, such as a digital sensor.
    */
@@ -229,12 +247,21 @@ public void drive(ChassisSpeeds speeds) {
 
   @Override
   public void periodic() {
-    // Updates odometry to make sure we have the right position/degrees all the time.
+    // Updates odometry to make sure we have the right position/degrees all the
+    // time.
     odometry.update(navX.getRotation2d(), leftEncoder.getPosition(), rightEncoder.getPosition());
+
     // Simple printing
     SmartDashboard.putNumber("left encoder value meters", getLeftEncoderPosition());
     SmartDashboard.putNumber("right encoder value meters", getRightEncoderPosition());
     SmartDashboard.putNumber("gyro", getHeading());
+    SmartDashboard.putNumber("leftSpeed", getLeftEncoderVelocity());
+    SmartDashboard.putNumber("rightSpeed", getRightEncoderVelocity());
+    SmartDashboard.putNumber("X-coordinate", odometry.getPoseMeters().getX());
+    SmartDashboard.putNumber("Y-coordinate", odometry.getPoseMeters().getY());
+    SmartDashboard.putNumber("rotation", odometry.getPoseMeters().getRotation().getDegrees());
+    SmartDashboard.putString("odom", odometry.getPoseMeters().toString());
+
     differentialDrive.feed();
   }
 
